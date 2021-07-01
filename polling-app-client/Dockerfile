@@ -1,39 +1,23 @@
 #### Stage 1: Build the react application
 FROM node:12.4.0-alpine as build
 
-# Configure the main working directory inside the docker image. 
-# This is the base directory used in any further RUN, COPY, and ENTRYPOINT 
-# commands.
-WORKDIR /app
 
-# Copy the package.json as well as the package-lock.json and install 
-# the dependencies. This is a separate step so the dependencies 
-# will be cached unless changes to one of those two files 
-# are made.
-COPY package.json package-lock.json ./
-RUN npm install
+WORKDIR /usr/src/app
 
-# Copy the main application
-COPY . ./
+RUN mkdir -p /usr/src/app
 
-# Arguments
-ARG REACT_APP_API_BASE_URL
-ENV REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL}
+ADD . /usr/src/app
 
-# Build the application
-RUN npm run build
+RUN npm install && npm run build
 
-#### Stage 2: Serve the React application from Nginx 
-FROM nginx:1.17.0-alpine
+FROM nginx:1.15.10-alpine
 
-# Copy the react build from Stage 1
-COPY --from=build /app/build /var/www
+MAINTAINER yangfan <yangfan@babyfs.cn>
 
-# Copy our custom nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY --from=build /usr/src/app/build /usr/share/nginx/html
 
-# Expose port 3000 to the Docker host, so we can access it 
-# from the outside.
+ADD nginx.conf /etc/nginx/conf.d/default.conf
+
 EXPOSE 80
 
 ENTRYPOINT ["nginx","-g","daemon off;"]
